@@ -8,42 +8,31 @@ require("dotenv").config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Test MySQL connection
-(async () => {
-  try {
-    const connection = await pool.getConnection();
-    console.log("✅ MySQL Database connected successfully");
-    connection.release();
-  } catch (error) {
-    console.error("❌ MySQL Database connection failed:", error.message);
-  }
-})();
-
 // Middleware
 app.use(cors());
 app.use(express.json());
-
-// Serve frontend from public folder
 app.use(express.static(path.join(__dirname, "public")));
 
-// URL Validation helper
+// URL Validation
 const isValidUrl = (urlStr) => {
   try {
     new URL(urlStr);
     return true;
-  } catch (err) {
+  } catch {
     return false;
   }
 };
 
+
+
 // ---------------- API ENDPOINTS ---------------- //
 
-// 1️⃣ Generate QR Code
+
+// Generate QR Code
 app.post("/api/generate", async (req, res) => {
   try {
     const { url, size = 250, color = "#000000", bgColor = "#FFFFFF" } = req.body;
 
-    // Validation
     if (!url || typeof url !== "string" || url.trim() === "") {
       return res.status(400).json({ success: false, error: "URL is required" });
     }
@@ -58,7 +47,6 @@ app.post("/api/generate", async (req, res) => {
       return res.status(400).json({ success: false, error: "Invalid size" });
     }
 
-    // Generate QR Code
     const qrOptions = {
       width: qrSize,
       color: {
@@ -69,13 +57,14 @@ app.post("/api/generate", async (req, res) => {
 
     const qrImage = await QRCode.toDataURL(url, qrOptions);
 
-    // Save to Database
+    // PostgreSQL insert
     const query = `
       INSERT INTO qr_codes (url, qr_image, size, color, bg_color)
-      VALUES (?, ?, ?, ?, ?)
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING id
     `;
 
-    const [result] = await pool.query(query, [
+    const result = await pool.query(query, [
       url,
       qrImage,
       qrSize,
@@ -83,49 +72,66 @@ app.post("/api/generate", async (req, res) => {
       bgColor,
     ]);
 
-    return res.status(200).json({
+    res.status(200).json({
       success: true,
-      qrImage: qrImage,
-      id: result.insertId,
+      qrImage,
+      id: result.rows[0].id,
     });
 
   } catch (error) {
     console.error("Error generating QR:", error);
-    return res.status(500).json({ success: false, error: "Internal server error" });
+    res.status(500).json({ success: false, error: "Internal server error" });
   }
 });
 
-// 2️⃣ Get History
+
+
+// Get History
 app.get("/api/history", async (req, res) => {
   try {
-    const query = "SELECT * FROM qr_codes ORDER BY created_at DESC LIMIT 10";
-    const [rows] = await pool.query(query);
-    return res.status(200).json(rows);
+    const query = `
+      SELECT * FROM qr_codes
+      ORDER BY created_at DESC
+      LIMIT 10
+    `;
+
+    const result = await pool.query(query);
+
+    res.status(200).json(result.rows);
+
   } catch (error) {
     console.error("Error fetching history:", error);
-    return res.status(500).json({ success: false, error: "Internal server error" });
+    res.status(500).json({ success: false, error: "Internal server error" });
   }
 });
 
-// 3️⃣ Delete QR Code
+
+
+// Delete QR
 app.delete("/api/delete/:id", async (req, res) => {
   try {
     const { id } = req.params;
 
-    const query = "DELETE FROM qr_codes WHERE id = ?";
-    const [result] = await pool.query(query, [id]);
+    const query = `DELETE FROM qr_codes WHERE id = $1`;
 
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ success: false, error: "Record not found" });
+    const result = await pool.query(query, [id]);
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({
+        success: false,
+        error: "Record not found",
+      });
     }
 
-    return res.status(200).json({ success: true });
+    res.status(200).json({ success: true });
 
   } catch (error) {
     console.error("Error deleting record:", error);
-    return res.status(500).json({ success: false, error: "Internal server error" });
+    res.status(500).json({ success: false, error: "Internal server error" });
   }
 });
+
+
 
 // ---------------- START SERVER ---------------- //
 
