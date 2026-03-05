@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QR Generator</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+  <div class="container">
+
+    <header>
+      <h1>QR Generator</h1>
+      <p>Now, create the custom QR for any link</p>
+    </header>
+
+    <main>
+
+      <!-- Input Section -->
+      <section class="card input-section">
+        <label for="urlInput">Enter URL</label>
+        <input type="text" id="urlInput" placeholder="https://example.com" />
+        <div id="urlError" class="error-text"></div>
+      </section>
+
+      <!-- Customization Section -->
+      <section class="card customization-section">
+        <h3>Customize Design</h3>
+
+        <div class="form-group">
+          <label for="sizeSelect">QR Size</label>
+          <select id="sizeSelect">
+            <option value="150">Small (150x150)</option>
+            <option value="250" selected>Medium (250x250)</option>
+            <option value="350">Large (350x350)</option>
+            <option value="custom">Custom Size...</option>
+          </select>
+
+          <input
+            type="number"
+            id="customSizeInput"
+            class="hidden"
+            placeholder="e.g. 400"
+            min="100"
+            max="1000"
+          />
+        </div>
+
+        <div class="colors-group">
+          <div class="form-group">
+            <label for="colorPicker">Foreground</label>
+            <input type="color" id="colorPicker" value="#000000">
+          </div>
+
+          <div class="form-group">
+            <label for="bgColorPicker">Background</label>
+            <input type="color" id="bgColorPicker" value="#ffffff">
+          </div>
+        </div>
+
+        <div class="action-buttons">
+          <button id="generateBtn" class="btn btn-primary">
+            Generate QR Code
+          </button>
+
+          <button id="resetBtn" class="btn btn-secondary">
+            Reset
+          </button>
+        </div>
+
+      </section>
+
+      <!-- Preview Section -->
+      <section class="card preview-section hidden" id="previewSection">
+
+        <h3>Result</h3>
+
+        <div class="qr-preview-box">
+          <img id="qrImage" src="" alt="Generated QR Code">
+        </div>
+
+        <div id="previewDetails" class="preview-details"></div>
+
+        <button id="downloadBtn" class="btn btn-success">
+          Download PNG
+        </button>
+
+      </section>
+
+      <!-- History Section -->
+      <section class="card history-section">
+
+        <h3>Recent QR Codes</h3>
+
+        <div id="historyContainer" class="history-container">
+          <div class="loader">Loading history...</div>
+        </div>
+
+      </section>
+
+    </main>
+
+  </div>
+
+  <footer>
+    <p>
+      Designed by <strong>Piyush Sinha</strong> |
+      Contact:
+      <a href="mailto:pkrnc2020@gmail.com">
+        pkrnc2020@gmail.com
+      </a>
+    </p>
+
+    <p>© 2026 All Rights Reserved</p>
+  </footer>
+
+  <script src="script.js"></script>
+
+</body>
+</html>
