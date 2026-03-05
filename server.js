@@ -13,7 +13,21 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
-// URL Validation
+
+// ---------------- DATABASE CONNECTION TEST ---------------- //
+
+(async () => {
+  try {
+    await pool.query("SELECT 1");
+    console.log("✅ Supabase PostgreSQL connected successfully");
+  } catch (error) {
+    console.error("❌ Database connection failed:", error.message);
+  }
+})();
+
+
+// ---------------- URL VALIDATION ---------------- //
+
 const isValidUrl = (urlStr) => {
   try {
     new URL(urlStr);
@@ -22,7 +36,6 @@ const isValidUrl = (urlStr) => {
     return false;
   }
 };
-
 
 
 // ---------------- API ENDPOINTS ---------------- //
@@ -41,26 +54,19 @@ app.post("/api/generate", async (req, res) => {
       return res.status(400).json({ success: false, error: "Invalid URL format" });
     }
 
-    const qrSize = parseInt(size, 10);
+    const qrSize = parseInt(size);
 
-    if (isNaN(qrSize) || qrSize <= 0) {
-      return res.status(400).json({ success: false, error: "Invalid size" });
-    }
-
-    const qrOptions = {
+    const qrImage = await QRCode.toDataURL(url, {
       width: qrSize,
       color: {
         dark: color,
         light: bgColor,
       },
-    };
+    });
 
-    const qrImage = await QRCode.toDataURL(url, qrOptions);
-
-    // PostgreSQL insert
     const query = `
       INSERT INTO qr_codes (url, qr_image, size, color, bg_color)
-      VALUES ($1, $2, $3, $4, $5)
+      VALUES ($1,$2,$3,$4,$5)
       RETURNING id
     `;
 
@@ -72,36 +78,34 @@ app.post("/api/generate", async (req, res) => {
       bgColor,
     ]);
 
-    res.status(200).json({
+    res.json({
       success: true,
       qrImage,
       id: result.rows[0].id,
     });
 
   } catch (error) {
-    console.error("Error generating QR:", error);
-    res.status(500).json({ success: false, error: "Internal server error" });
+    console.error("❌ QR generation error:", error);
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
 
 
-// Get History
+// Get QR History
 app.get("/api/history", async (req, res) => {
   try {
-    const query = `
+    const result = await pool.query(`
       SELECT * FROM qr_codes
       ORDER BY created_at DESC
       LIMIT 10
-    `;
+    `);
 
-    const result = await pool.query(query);
-
-    res.status(200).json(result.rows);
+    res.json(result.rows);
 
   } catch (error) {
-    console.error("Error fetching history:", error);
-    res.status(500).json({ success: false, error: "Internal server error" });
+    console.error("❌ History fetch error:", error);
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
@@ -112,9 +116,10 @@ app.delete("/api/delete/:id", async (req, res) => {
   try {
     const { id } = req.params;
 
-    const query = `DELETE FROM qr_codes WHERE id = $1`;
-
-    const result = await pool.query(query, [id]);
+    const result = await pool.query(
+      "DELETE FROM qr_codes WHERE id = $1",
+      [id]
+    );
 
     if (result.rowCount === 0) {
       return res.status(404).json({
@@ -123,14 +128,13 @@ app.delete("/api/delete/:id", async (req, res) => {
       });
     }
 
-    res.status(200).json({ success: true });
+    res.json({ success: true });
 
   } catch (error) {
-    console.error("Error deleting record:", error);
-    res.status(500).json({ success: false, error: "Internal server error" });
+    console.error("❌ Delete error:", error);
+    res.status(500).json({ success: false, error: error.message });
   }
 });
-
 
 
 // ---------------- START SERVER ---------------- //
@@ -138,3 +142,7 @@ app.delete("/api/delete/:id", async (req, res) => {
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
+
+
+// Required for Vercel serverless
+module.exports = app;
