@@ -3,30 +3,29 @@ const cors = require("cors");
 const QRCode = require("qrcode");
 const path = require("path");
 const pool = require("./db");
+require("dotenv").config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-/* ---------------- MIDDLEWARE ---------------- */
+/* Middleware */
 
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
-
-/* ---------------- DATABASE CONNECTION TEST ---------------- */
+/* Database test */
 
 (async () => {
   try {
-    await pool.query("SELECT 1");
+    await pool.query("SELECT NOW()");
     console.log("✅ PostgreSQL database connected successfully");
   } catch (error) {
     console.error("❌ Database connection failed:", error.message);
   }
 })();
 
-
-/* ---------------- URL VALIDATION ---------------- */
+/* URL validation */
 
 function isValidUrl(url) {
   try {
@@ -37,14 +36,10 @@ function isValidUrl(url) {
   }
 }
 
+/* Generate QR */
 
-/* ---------------- API ROUTES ---------------- */
-
-
-/* Generate QR Code */
 app.post("/api/generate", async (req, res) => {
   try {
-
     const { url, size = 250, color = "#000000", bgColor = "#FFFFFF" } = req.body;
 
     if (!url || !isValidUrl(url)) {
@@ -93,11 +88,10 @@ app.post("/api/generate", async (req, res) => {
   }
 });
 
+/* History */
 
-/* Get QR History */
 app.get("/api/history", async (req, res) => {
   try {
-
     const result = await pool.query(
       "SELECT * FROM qr_codes ORDER BY created_at DESC LIMIT 10"
     );
@@ -113,11 +107,10 @@ app.get("/api/history", async (req, res) => {
   }
 });
 
+/* Delete */
 
-/* Delete QR Code */
 app.delete("/api/delete/:id", async (req, res) => {
   try {
-
     const { id } = req.params;
 
     const result = await pool.query(
@@ -132,9 +125,7 @@ app.delete("/api/delete/:id", async (req, res) => {
       });
     }
 
-    res.json({
-      success: true
-    });
+    res.json({ success: true });
 
   } catch (error) {
     console.error("❌ Delete error:", error);
@@ -145,13 +136,10 @@ app.delete("/api/delete/:id", async (req, res) => {
   }
 });
 
-
-/* ---------------- SERVER START ---------------- */
+/* Start server */
 
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
 
-
-/* Export for Vercel */
 module.exports = app;
