@@ -17,6 +17,10 @@ app.use(express.static(path.join(__dirname, "public")));
 /* Database test */
 
 (async () => {
+  if (!process.env.DATABASE_URL) {
+    console.warn("⚠️ DATABASE_URL is missing! Please set DATABASE_URL in Vercel Environment Variables.");
+    return;
+  }
   try {
     await pool.query("SELECT NOW()");
     console.log("✅ PostgreSQL database connected successfully");
@@ -46,6 +50,13 @@ app.post("/api/generate", async (req, res) => {
       return res.status(400).json({
         success: false,
         error: "Invalid or missing URL"
+      });
+    }
+
+    if (!process.env.DATABASE_URL) {
+      return res.status(500).json({
+        success: false,
+        error: "DATABASE_URL environment variable is not set in Vercel. Please add DATABASE_URL in Vercel Project Settings."
       });
     }
 
@@ -92,6 +103,13 @@ app.post("/api/generate", async (req, res) => {
 
 app.get("/api/history", async (req, res) => {
   try {
+    if (!process.env.DATABASE_URL) {
+      return res.status(500).json({
+        success: false,
+        error: "DATABASE_URL environment variable is missing on Vercel."
+      });
+    }
+
     const result = await pool.query(
       "SELECT * FROM qr_codes ORDER BY created_at DESC LIMIT 10"
     );
@@ -111,6 +129,13 @@ app.get("/api/history", async (req, res) => {
 
 app.delete("/api/delete/:id", async (req, res) => {
   try {
+    if (!process.env.DATABASE_URL) {
+      return res.status(500).json({
+        success: false,
+        error: "DATABASE_URL environment variable is missing on Vercel."
+      });
+    }
+
     const { id } = req.params;
 
     const result = await pool.query(
