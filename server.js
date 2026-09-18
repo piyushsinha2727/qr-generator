@@ -83,7 +83,7 @@ app.post("/api/generate", async (req, res) => {
     console.error("❌ QR generation error:", error);
     res.status(500).json({
       success: false,
-      error: "Internal server error"
+      error: error.message || "Internal server error"
     });
   }
 });
